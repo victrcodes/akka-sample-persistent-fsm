@@ -41,7 +41,10 @@ class Generator extends PersistentFSM[State, Data, DomainEvt] {
 
 	override def applyEvent(domainEvent: DomainEvt, currentData: Data): Data = {
 		domainEvent match {
-			case SetNumberEvt(num) => currentData.add(num)
+			case SetNumberEvt(num) =>
+				val data = currentData.add(num)
+				println(data)
+				data
 			case ResetEvt() => currentData.empty()
 		}
 	}
@@ -58,15 +61,17 @@ class Generator extends PersistentFSM[State, Data, DomainEvt] {
 			goto(Active) applying SetNumberEvt(num)
 		case Event(Reset, _) =>
 			println("Reset")
+			deleteMessages(1000)
 			goto(Active) applying ResetEvt()
 	}
 
 	when(Active) {
 		case Event(SetNumber(num), numbers: Data) =>
-			println(numbers)
+			//println(numbers)
 			stay applying SetNumberEvt(num)
 		case Event(Reset, _) =>
 			println("Reset")
+			deleteMessages(1000)
 			stay applying ResetEvt() replying "reset done"
 	}
 
@@ -80,7 +85,7 @@ object PersistentFSMExample extends App {
 
 	val actor = system.actorOf(Props[Generator])
 
- 	implicit val timeout = Timeout(500 millis)
+ 	implicit val timeout = Timeout(5000 millis)
 
 	val reset: Future[_] = if (args.length > 0 && args(0) == "reset") actor ? Reset else Future("continue")
 
@@ -92,7 +97,7 @@ object PersistentFSMExample extends App {
 		actor ! SetNumber(Random.nextInt())
 	}
 
-	Thread.sleep(1000)
+	Thread.sleep(3000)
 	system.terminate()
 
 }
