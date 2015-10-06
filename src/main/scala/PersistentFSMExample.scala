@@ -67,7 +67,7 @@ class Generator extends PersistentFSM[State, Data, DomainEvt] {
 
 	when(Active) {
 		case Event(SetNumber(num), numbers: Data) => stay applying SetNumberEvt(num)
-		case Event(Reset, _) => stay applying ResetEvt() replying "RESET COMPLETED"
+		case Event(Reset, _) => goto(Idle) applying ResetEvt() replying "RESET COMPLETED"
 	}
 
 	initialize()
