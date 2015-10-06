@@ -45,7 +45,10 @@ class Generator extends PersistentFSM[State, Data, DomainEvt] {
 				val data = currentData.add(num)
 				println(data)
 				data
-			case ResetEvt() => currentData.empty()
+			case ResetEvt() =>
+				deleteMessages(1000)
+				println("RESET")
+				currentData.empty()
 		}
 	}
 
@@ -57,22 +60,14 @@ class Generator extends PersistentFSM[State, Data, DomainEvt] {
 
 	when(Idle) {
 		case Event(SetNumber(num), _) =>
-			println("Starting idle")
+			println("STARTING IDLE")
 			goto(Active) applying SetNumberEvt(num)
-		case Event(Reset, _) =>
-			println("Reset")
-			deleteMessages(1000)
-			goto(Active) applying ResetEvt()
+		case Event(Reset, _) => goto(Active) applying ResetEvt()
 	}
 
 	when(Active) {
-		case Event(SetNumber(num), numbers: Data) =>
-			//println(numbers)
-			stay applying SetNumberEvt(num)
-		case Event(Reset, _) =>
-			println("Reset")
-			deleteMessages(1000)
-			stay applying ResetEvt() replying "reset done"
+		case Event(SetNumber(num), numbers: Data) => stay applying SetNumberEvt(num)
+		case Event(Reset, _) => stay applying ResetEvt() replying "RESET COMPLETED"
 	}
 
 	initialize()
@@ -85,11 +80,12 @@ object PersistentFSMExample extends App {
 
 	val actor = system.actorOf(Props[Generator])
 
- 	implicit val timeout = Timeout(5000 millis)
+ 	implicit val timeout = Timeout(5 seconds)
 
-	val reset: Future[_] = if (args.length > 0 && args(0) == "reset") actor ? Reset else Future("continue")
+	val reset: Future[_] = if (args.length > 0 && args(0) == "reset") actor ? Reset else Future("CONTINUE")
 
-	reset.onComplete { _ =>
+	reset.onComplete { response =>
+		println(response)
 		actor ! SetNumber(Random.nextInt())
 		actor ! SetNumber(Random.nextInt())
 		actor ! SetNumber(Random.nextInt())
